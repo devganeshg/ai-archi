@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<!-- ai-archi asset library: shapes — workflow / lifecycle markers -->
+<symbol id="s-decision" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l9 9-9 9-9-9z"/>
+  </g>
+</symbol>
+<symbol id="s-start" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M10 8.5l6 3.5-6 3.5z"/>
+  </g>
+</symbol>
+<symbol id="s-end" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>
+  </g>
+</symbol>
+<symbol id="s-check" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M8 12.3l2.8 2.9L16 9.4"/>
+  </g>
+</symbol>
+<symbol id="s-error" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V13M12 16.4v.2"/>
+  </g>
+</symbol>
+<symbol id="s-retry" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4v4h-4"/>
+  </g>
+</symbol>
+<symbol id="s-cancel" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>
+  </g>
+</symbol>
+<symbol id="s-doc" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5h16v11.5c-2.7-1.6-5.3 1.6-8 0s-5.3 1.6-8 0z"/>
+  </g>
+</symbol>
+<symbol id="s-timer" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 3.5h10M7 20.5h10M8 3.5v3L12 12l4-5.5v-3M8 20.5v-3L12 12l4 5.5v3"/>
+  </g>
+</symbol>
+</svg>

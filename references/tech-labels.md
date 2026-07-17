@@ -1,9 +1,11 @@
 # Semantic tech labels → visual category
 
 Users describe components with semantic labels (`aws.lambda`, `postgres`,
-`github-actions`). Map each to one of the eight visual categories. No icon
-library needed — the category supplies color + glyph; the label itself goes in
-the node's `.node-sub` line.
+`github-actions`). Map each to one of the eight visual categories — the
+category supplies the color and a default glyph; the label itself goes in the
+node's `.node-sub` line. For a sharper glyph than the category default
+(kubernetes wheel, vector-db, LLM sparkle, …), check `assets/INDEX.md` and
+inline the symbol via `node scripts/icons.mjs pick <id>`.
 
 | Category (`cat-*`) | Glyph | Semantic labels |
 |---|---|---|

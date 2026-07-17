@@ -30,9 +30,16 @@ at maximum resolution.
   reader's color preference
 - **Validation loop built in** — `scripts/validate.mjs` checks structure,
   self-containedness, id integrity, step contiguity, and node-overlap layout
+- **Multiple asset libraries** — 46 hand-drawn, brand-neutral glyphs across
+  three libraries (`core` category glyphs, `tech` for kubernetes / vector-db /
+  LLM / CI and 25 more, `shapes` for workflow & lifecycle markers), browsable
+  and extractable with `scripts/icons.mjs`; only the symbols a diagram uses
+  are inlined, so files stay dependency-free
 - **Semantic tech labels** — `aws.lambda`, `postgres`, `redis`,
-  `github-actions`, `openai`, … map to the right visual category with no icon
-  library
+  `github-actions`, `openai`, … map to the right visual category and library
+  icon automatically
+- **Keyboard shortcuts** — `T` theme, `M` motion, `C` copy PNG, `E` export,
+  `←`/`→`/`Space` step player
 - **Self-contained HTML** — zero dependencies, share by sending the file
 - **Iterate by chat** — "add Redis", "move auth to the left", "use emerald for
   the API"
@@ -63,8 +70,11 @@ the login flow"*, *"animate the CI/CD pipeline"*.
 ```
 SKILL.md                    the agent skill (workflow + SVG building rules)
 templates/diagram.html      canonical template: full runtime + demo diagram
+assets/                     icon libraries: core.svg, tech.svg, shapes.svg
+assets/INDEX.md             icon catalog + label → icon mapping
 references/diagram-types.md per-type layout recipes (sequence, LLD, …)
 references/tech-labels.md   semantic label → category mapping
+scripts/icons.mjs           icon CLI: list / grep / pick (defs-ready markup)
 scripts/validate.mjs        structural + layout validator
 ```
 

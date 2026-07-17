@@ -11,6 +11,7 @@ shape — most contributions land in one of four places.
 | How the agent plans and builds diagrams | `SKILL.md` |
 | New diagram-type recipes or layout patterns | `references/diagram-types.md` |
 | New semantic tech labels | `references/tech-labels.md` |
+| New icons / icon libraries | `assets/*.svg` + catalog in `assets/INDEX.md` (brand-neutral only — no real logomarks) |
 | Validation checks | `scripts/validate.mjs` |
 
 ## Ground rules

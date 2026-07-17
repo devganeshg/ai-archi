@@ -54,9 +54,19 @@ sending it.
 - Category classes (pick by semantic label, see `references/tech-labels.md`):
   `cat-client` `cat-gateway` `cat-compute` `cat-storage` `cat-queue`
   `cat-external` `cat-security` `cat-observe`.
-- Icons in `defs`: `#i-client #i-gateway #i-compute #i-storage #i-queue
-  #i-security #i-external #i-observe`. Add new 24×24 symbols
-  (stroke `currentColor`, width 1.7) if a type needs its own glyph.
+- **Icons** — the template's `defs` ship the 8 category glyphs. For specific
+  technologies, pull sharper glyphs from the asset libraries
+  (`assets/INDEX.md` has the full catalog — 46 icons across core/tech/shapes):
+  ```bash
+  node scripts/icons.mjs grep vector          # find the id
+  node scripts/icons.mjs pick i-vector-db i-llm   # print defs-ready markup
+  ```
+  Paste the printed `<symbol>`s into `defs`, reference with
+  `<use class="node-icon" href="#i-vector-db" …>`. Inline only symbols the
+  diagram actually uses (self-containment). The category class still sets the
+  color; the icon just gets more specific. Only invent a new symbol when no
+  library icon fits — 24×24, stroke `currentColor`, width 1.7 — and consider
+  contributing it back to `assets/`.
 - `--d` is the entrance-animation delay: stagger nodes .05 s–.8 s
   left-to-right / top-to-bottom.
 - Anchors of a node at (X, Y): left `(X, Y+28)`, right `(X+168, Y+28)`,
