@@ -1,8 +1,14 @@
-# ai-archi
+<div align="center">
+  <img src="docs/assets/logo.svg" width="112" alt="ai-archi logo — three diagram nodes with an animated flow edge">
+  <h1>ai-archi</h1>
+  <p><b>Animated architecture, LLD &amp; flow diagrams from plain English.</b><br>
+  The logo above is the product: a self-contained SVG that animates its own flow edges and follows your dark/light scheme.</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-8d87ff.svg)](LICENSE)
-[![Agent skill](https://img.shields.io/badge/Claude_Code-agent_skill-4f46cf.svg)](SKILL.md)
-[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-147a4e.svg)](templates/diagram.html)
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-8d87ff.svg" alt="License: MIT"></a>
+  <a href="SKILL.md"><img src="https://img.shields.io/badge/Claude_Code-agent_skill-4f46cf.svg" alt="Agent skill"></a>
+  <a href="templates/diagram.html"><img src="https://img.shields.io/badge/dependencies-zero-147a4e.svg" alt="Zero dependencies"></a>
+  <a href="https://github.com/devganeshg/ai-archi/actions"><img src="https://github.com/devganeshg/ai-archi/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</div>
 
 An agent skill for Claude Code that turns a plain-English description of your
 system into a polished, **animated**, self-contained technical diagram — a

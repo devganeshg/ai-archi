@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 160" role="img" aria-label="ai-archi — animated architecture diagrams from plain English">
+  <style>
+    :root{--bg:#eef1f6;--surface:#ffffff;--line:#8b96a9;--ink:#182236;--muted:#5b6577;
+      --a:#4f46cf;--b:#ad5f10;--c:#147a4e;--flow:#4f46cf}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#161d2a;--surface:#0b0f16;--line:#526078;--ink:#e9edf5;--muted:#8b96a8;
+        --a:#8d87ff;--b:#f0a24a;--c:#43c383;--flow:#8d87ff}
+    }
+    text{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+    .edge{fill:none;stroke:var(--line);stroke-width:2.4;stroke-linecap:round}
+    .flow{fill:none;stroke:var(--flow);stroke-width:3;stroke-linecap:round;
+      stroke-dasharray:4 9;animation:dash 1.1s linear infinite;opacity:.95}
+    @keyframes dash{to{stroke-dashoffset:-13}}
+    .packet{fill:var(--flow)}
+    .node{fill:var(--surface);stroke-width:3}
+    @media (prefers-reduced-motion: reduce){.flow{animation:none}.packet{display:none}}
+  </style>
+
+  <g transform="translate(24 20)">
+    <rect width="120" height="120" rx="26" fill="var(--bg)"/>
+    <path id="bp1" class="edge" d="M54 34 H79 Q83 34 83 38 V44"/>
+    <path class="flow" d="M54 34 H79 Q83 34 83 38 V44"/>
+    <path id="bp2" class="edge" d="M83 76 V82 Q83 86 79 86 H58"/>
+    <path class="flow" d="M83 76 V82 Q83 86 79 86 H58"/>
+    <path class="edge" d="M37 50 V70" stroke-dasharray="2.5 5.5"/>
+    <rect class="node" x="20" y="22" width="34" height="24" rx="8" stroke="var(--a)"/>
+    <rect class="node" x="66" y="48" width="34" height="24" rx="8" stroke="var(--b)"/>
+    <rect class="node" x="20" y="74" width="34" height="24" rx="8" stroke="var(--c)"/>
+    <circle class="packet" r="3.4">
+      <animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#bp1"/></animateMotion>
+    </circle>
+    <circle class="packet" r="3.4">
+      <animateMotion dur="2.2s" begin="1.1s" repeatCount="indefinite"><mpath href="#bp2"/></animateMotion>
+    </circle>
+  </g>
+
+  <text x="176" y="86" font-size="56" font-weight="700" letter-spacing="-1" fill="var(--ink)">ai-archi</text>
+  <text x="180" y="122" font-size="20" fill="var(--muted)">animated architecture, LLD &amp; flow diagrams from plain English</text>
+</svg>
