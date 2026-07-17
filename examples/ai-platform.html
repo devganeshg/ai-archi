@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Platform — Request &amp; Inference Flow</title>
+<script>
+/* Apply saved theme before first paint to avoid a flash. */
+(function(){try{var t=localStorage.getItem('ai-archi-theme');
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+
+<style id="theme-vars">
+/* ============ THEME VARIABLES ============
+   The exporter reads this block. Keep exactly two rules:
+   [data-theme="light"]{...} and [data-theme="dark"]{...}   */
+[data-theme="light"]{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#182236; --muted:#5b6577;
+  --line:#8b96a9; --zone-fill:rgba(24,34,54,.035); --shadow:rgba(24,34,54,.10);
+  --bar-bg:rgba(255,255,255,.82); --btn-bg:#ffffff; --btn-border:#d6dce6;
+  --cat-client:#1868c9;   --cat-client-soft:#e1edfb;
+  --cat-gateway:#0d7f7a;  --cat-gateway-soft:#dcf2f0;
+  --cat-compute:#4f46cf;  --cat-compute-soft:#e8e7fb;
+  --cat-storage:#ad5f10;  --cat-storage-soft:#faecdc;
+  --cat-queue:#ab30a3;    --cat-queue-soft:#f7e3f6;
+  --cat-external:#6d43cf; --cat-external-soft:#ece5fa;
+  --cat-security:#c22f45; --cat-security-soft:#fae3e7;
+  --cat-observe:#147a4e;  --cat-observe-soft:#def2e7;
+  --accent:#4f46cf;
+}
+[data-theme="dark"]{
+  --bg:#0b0f16; --surface:#161d2a; --ink:#e9edf5; --muted:#8b96a8;
+  --line:#526078; --zone-fill:rgba(233,237,245,.028); --shadow:rgba(0,0,0,.45);
+  --bar-bg:rgba(11,15,22,.82); --btn-bg:#161d2a; --btn-border:#2a3547;
+  --cat-client:#5aa2ff;   --cat-client-soft:#17304f;
+  --cat-gateway:#35c4bd;  --cat-gateway-soft:#0e3230;
+  --cat-compute:#8d87ff;  --cat-compute-soft:#262a52;
+  --cat-storage:#f0a24a;  --cat-storage-soft:#3c2a12;
+  --cat-queue:#e26ad8;    --cat-queue-soft:#3a1c3c;
+  --cat-external:#a583ff; --cat-external-soft:#2b2347;
+  --cat-security:#f07082; --cat-security-soft:#3d1a22;
+  --cat-observe:#43c383;  --cat-observe-soft:#123527;
+  --accent:#8d87ff;
+}
+</style>
+
+<style id="svg-style">
+/* ============ DIAGRAM (SVG) STYLES ============
+   Everything in this block is embedded into exported files.
+   Do not put page-chrome rules here.                        */
+#diagram{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+.dg-bg{fill:var(--bg)}
+.dg-title{font-size:20px;font-weight:700;fill:var(--ink);letter-spacing:-.2px}
+.dg-sub{font-size:12px;fill:var(--muted)}
+
+/* category color hooks */
+.cat-client{--c:var(--cat-client);--cs:var(--cat-client-soft)}
+.cat-gateway{--c:var(--cat-gateway);--cs:var(--cat-gateway-soft)}
+.cat-compute{--c:var(--cat-compute);--cs:var(--cat-compute-soft)}
+.cat-storage{--c:var(--cat-storage);--cs:var(--cat-storage-soft)}
+.cat-queue{--c:var(--cat-queue);--cs:var(--cat-queue-soft)}
+.cat-external{--c:var(--cat-external);--cs:var(--cat-external-soft)}
+.cat-security{--c:var(--cat-security);--cs:var(--cat-security-soft)}
+.cat-observe{--c:var(--cat-observe);--cs:var(--cat-observe-soft)}
+
+/* zones */
+.zone-box{fill:var(--zone-fill);stroke:var(--line);stroke-opacity:.45;
+  stroke-dasharray:5 5;stroke-width:1;rx:16px}
+.zone-title{font-size:10px;font-weight:650;letter-spacing:1.4px;fill:var(--muted)}
+
+/* nodes */
+.node-box{fill:var(--surface);stroke:var(--c);stroke-opacity:.55;stroke-width:1.3}
+.node-chip{fill:var(--cs)}
+.node-icon{color:var(--c)}
+.node-title{font-size:13.5px;font-weight:650;fill:var(--ink)}
+.node-sub{font-size:10.5px;fill:var(--muted)}
+
+/* edges */
+.edge{fill:none;stroke:var(--line);stroke-width:1.5;opacity:.9}
+.edge.dotted{stroke-dasharray:3 5;opacity:.65}
+.arrow-head{fill:var(--line)}
+.edge-label{font-size:10.5px;fill:var(--muted);
+  paint-order:stroke;stroke:var(--bg);stroke-width:3.5px;stroke-linejoin:round}
+
+/* ---- animation layer ---- */
+.edge-flow{fill:none;stroke:var(--c,var(--accent));stroke-width:2.4;
+  stroke-linecap:round;stroke-dasharray:5 15;opacity:.95;
+  animation:dashmove 1.15s linear infinite}
+@keyframes dashmove{to{stroke-dashoffset:-20}}
+.packet{fill:var(--c,var(--accent))}
+
+/* entrances (opacity-only so export/static state is final state) */
+.node-in{animation:rise .55s cubic-bezier(.22,1,.36,1) var(--d,0s) both}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.edge-g,.zone,.dg-head{animation:fade .5s ease var(--d,0s) both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* step-player states */
+#diagram.stepping [data-step]{opacity:.15;transition:opacity .35s ease}
+#diagram.stepping [data-step].step-done{opacity:.55}
+#diagram.stepping [data-step].step-now{opacity:1}
+</style>
+
+<style id="ui-style">
+/* ============ PAGE CHROME (never exported) ============ */
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);
+  font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  display:flex;flex-direction:column;min-height:100vh;
+  transition:background .25s ease,color .25s ease}
+.bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:16px;
+  justify-content:space-between;flex-wrap:wrap;padding:10px 20px;
+  background:var(--bar-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--btn-border)}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.logo{width:11px;height:11px;border-radius:4px;background:var(--accent);flex:none;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}
+.brand h1{font-size:14.5px;font-weight:650;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{font-size:11px;color:var(--muted);margin:1px 0 0;white-space:nowrap}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.controls button,.controls select{font:inherit;font-size:12px;color:var(--ink);
+  background:var(--btn-bg);border:1px solid var(--btn-border);border-radius:9px;
+  padding:6px 11px;cursor:pointer;transition:border-color .15s,background .15s}
+.controls button:hover{border-color:var(--accent)}
+.controls select{padding:6px 7px}
+.sep{width:1px;height:22px;background:var(--btn-border)}
+.steps{display:flex;align-items:center;gap:4px;padding:2px;border:1px solid var(--btn-border);
+  border-radius:11px;background:var(--btn-bg)}
+.steps button{border:none;background:transparent;padding:4px 9px;border-radius:8px}
+.steps button:hover{background:color-mix(in srgb,var(--accent) 14%,transparent);border:none}
+.steps .info{font-size:11px;color:var(--muted);min-width:34px;text-align:center;
+  font-variant-numeric:tabular-nums}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+.stage{flex:1;display:flex;align-items:flex-start;justify-content:center;
+  padding:26px 20px 12px;overflow:auto}
+.canvas-wrap{width:100%;max-width:1180px;background:var(--bg);border-radius:18px}
+#diagram{width:100%;height:auto;display:block;
+  filter:drop-shadow(0 10px 30px var(--shadow))}
+footer{text-align:center;font-size:11px;color:var(--muted);padding:10px 16px 18px}
+kbd{border:1px solid var(--btn-border);border-radius:5px;padding:1px 5px;font-size:10px}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(14px);
+  background:var(--surface);color:var(--ink);border:1px solid var(--btn-border);
+  border-radius:10px;padding:9px 16px;font-size:12.5px;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;box-shadow:0 8px 26px var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.anim-off #diagram *{animation-play-state:paused !important}
+@media (prefers-reduced-motion:reduce){#diagram *{animation:none !important}}
+@media print{.bar,footer,#toast{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="logo"></span>
+    <div>
+      <h1 id="docTitle">AI Platform — Request &amp; Inference Flow</h1>
+      <p>ai-archi · animated architecture diagram</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="steps" id="stepCtrl" hidden>
+      <button id="stepPrev" title="Previous step">‹</button>
+      <button id="stepPlay" title="Play steps">▶</button>
+      <button id="stepNext" title="Next step">›</button>
+      <span class="info" id="stepInfo">all</span>
+    </div>
+    <button id="animBtn" title="Pause / resume animation">⏸ Motion</button>
+    <button id="themeBtn" title="Toggle dark / light">
+      <span class="icon-moon">☾ Dark</span><span class="icon-sun">☀ Light</span>
+    </button>
+    <span class="sep"></span>
+    <button id="copyBtn" title="Copy PNG to clipboard">⧉ Copy PNG</button>
+    <select id="fmt" title="Export format">
+      <option value="png">PNG</option><option value="jpeg">JPEG</option>
+      <option value="webp">WebP</option><option value="svg">SVG</option>
+    </select>
+    <select id="scale" title="Export scale">
+      <option value="1">1×</option><option value="2" selected>2×</option>
+      <option value="3">3×</option><option value="4">4×</option>
+    </select>
+    <button id="dlBtn">⇩ Export</button>
+  </div>
+</header>
+
+<main class="stage"><div class="canvas-wrap">
+
+<!-- ==================== DIAGRAM ==================== -->
+<svg id="diagram" viewBox="0 0 1032 540" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Architecture diagram: AI Platform — Request &amp; Inference Flow">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 .6 L9.4 5 L0 9.4 z" class="arrow-head"/>
+    </marker>
+    <symbol id="i-client" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4.5" width="18" height="14" rx="2"/><path d="M3 8.5h18M9 21h6"/><circle cx="6" cy="6.5" r=".4"/>
+      </g>
+    </symbol>
+    <symbol id="i-gateway" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h12M11 6l6 6-6 6M17.5 4v3M17.5 17v3M21 10.5v3"/>
+      </g>
+    </symbol>
+    <symbol id="i-security" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l7 2.6v5.2c0 4.6-3 8.4-7 10.2-4-1.8-7-5.6-7-10.2V5.6z"/><path d="M9.3 12l2 2 3.6-3.8"/>
+      </g>
+    </symbol>
+    <symbol id="i-compute" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6.5" y="6.5" width="11" height="11" rx="2"/><rect x="10" y="10" width="4" height="4" rx="1"/>
+        <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>
+      </g>
+    </symbol>
+    <symbol id="i-queue" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h13M7 12h13M4 17h13"/><path d="M19.5 5l2 2-2 2M17.5 15l2 2-2 2"/>
+      </g>
+    </symbol>
+    <symbol id="i-gpu" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="6" width="18" height="11" rx="2"/><circle cx="9" cy="11.5" r="3"/>
+        <circle cx="16.5" cy="11.5" r="1.8"/><path d="M6 20h12"/>
+      </g>
+    </symbol>
+    <symbol id="i-storage" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/>
+        <path d="M4.5 5.5v13c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8v-13M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/>
+      </g>
+    </symbol>
+    <symbol id="i-cache" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/>
+        <path d="M4.5 5.5v13c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8v-13"/>
+        <path d="M13 9.5l-2.8 4.2h2.6L11.3 18l4.3-5.6h-2.6z"/>
+      </g>
+    </symbol>
+    <symbol id="i-llm" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 3l1.7 4.8L17.5 9.5l-4.8 1.7L11 16l-1.7-4.8L4.5 9.5l4.8-1.7z"/>
+        <path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>
+      </g>
+    </symbol>
+    <symbol id="i-observe" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 13h4l2.4-6 3.4 10 2.6-7 1.6 3H21"/>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect class="dg-bg" x="0" y="0" width="1032" height="540"/>
+
+  <g class="dg-head">
+    <text class="dg-title" x="40" y="46">AI Platform — Request &amp; Inference Flow</text>
+    <text class="dg-sub" x="40" y="66">Client traffic is authenticated at the edge, served by the app tier, and fanned out to async GPU inference.</text>
+  </g>
+
+  <g class="zone" style="--d:0.1s">
+    <rect class="zone-box" x="516" y="84" width="216" height="412" rx="16"/>
+    <text class="zone-title" x="532" y="106">APPLICATION VPC</text>
+  </g>
+  <g class="zone" style="--d:0.1s">
+    <rect class="zone-box" x="756" y="84" width="216" height="312" rx="16"/>
+    <text class="zone-title" x="772" y="106">DATA LAYER</text>
+  </g>
+
+  <g class="edge-g cat-gateway" data-step="1" style="--d:0.6s">
+    <path id="e1" class="edge" d="M228 248 L296 248" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M228 248 L296 248"/>
+    <text class="edge-label" x="262" y="241" text-anchor="middle">https</text>
+    <circle class="packet" r="3.4"><animateMotion dur="1.6s" begin="0s" repeatCount="indefinite"><mpath href="#e1"/></animateMotion></circle>
+  </g>
+  <g class="edge-g cat-security" data-step="2" style="--d:0.6s">
+    <path id="e2" class="edge" d="M468 241 L498 241 Q502 241 502 237 L502 152 Q502 148 506 148 L536 148" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M468 241 L498 241 Q502 241 502 237 L502 152 Q502 148 506 148 L536 148"/>
+    <text class="edge-label" x="511" y="194.5">verify jwt</text>
+  </g>
+  <g class="edge-g cat-compute" data-step="3" style="--d:0.7s">
+    <path id="e3" class="edge" d="M468 255 L536 255" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M468 255 L536 255"/>
+    <text class="edge-label" x="502" y="248" text-anchor="middle">rest</text>
+    <circle class="packet" r="3.4"><animateMotion dur="2.4s" begin="1s" repeatCount="indefinite"><mpath href="#e3"/></animateMotion></circle>
+  </g>
+  <g class="edge-g cat-storage" data-step="4" style="--d:0.7s">
+    <path id="e4" class="edge" d="M708 234 L738 234 Q742 234 742 230 L742 152 Q742 148 746 148 L776 148" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M708 234 L738 234 Q742 234 742 230 L742 152 Q742 148 746 148 L776 148"/>
+    <text class="edge-label" x="751" y="191">sql</text>
+  </g>
+  <g class="edge-g cat-storage" style="--d:0.8s">
+    <path id="e5" class="edge" d="M708 248 L776 248" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="742" y="241" text-anchor="middle">cache</text>
+  </g>
+  <g class="edge-g cat-storage" style="--d:0.8s">
+    <path id="e6" class="edge" d="M708 262 L760 262 Q764 262 764 266 L764 344 Q764 348 768 348 L776 348" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="773" y="305">assets</text>
+  </g>
+  <g class="edge-g cat-queue" data-step="5" style="--d:0.9s">
+    <path id="e7" class="edge" d="M624 276 L624 316" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M624 276 L624 316"/>
+    <text class="edge-label" x="633" y="296">publish</text>
+  </g>
+  <g class="edge-g cat-compute" data-step="6" style="--d:0.9s">
+    <path id="e8" class="edge" d="M624 376 L624 416" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M624 376 L624 416"/>
+    <text class="edge-label" x="633" y="396">consume</text>
+  </g>
+  <g class="edge-g cat-external" data-step="7" style="--d:1s">
+    <path id="e9" class="edge" d="M708 448 L776 448" marker-end="url(#arrow)"/>
+    <path class="edge-flow" d="M708 448 L776 448"/>
+    <text class="edge-label" x="742" y="441" text-anchor="middle">inference</text>
+    <circle class="packet" r="3.4"><animateMotion dur="2.4s" begin="0s" repeatCount="indefinite"><mpath href="#e9"/></animateMotion></circle>
+  </g>
+  <g class="edge-g cat-observe" style="--d:1s">
+    <path id="e10" class="edge dotted" d="M384 276 L384 416" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="393" y="346">metrics</text>
+  </g>
+  <g class="edge-g cat-observe" style="--d:1.1s">
+    <path id="e11" class="edge dotted" d="M540 448 L472 448" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="506" y="441" text-anchor="middle">traces</text>
+  </g>
+
+  <g class="node cat-client" transform="translate(60 220)" style="--d:0.1s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-client" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Web Client</text>
+    <text class="node-sub" x="52" y="42">react · browser</text>
+  </g></g>
+  <g class="node cat-gateway" transform="translate(300 220)" style="--d:0.1s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-gateway" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">API Gateway</text>
+    <text class="node-sub" x="52" y="42">kong · rate-limit</text>
+  </g></g>
+  <g class="node cat-observe" transform="translate(300 420)" style="--d:0.2s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-observe" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Observability</text>
+    <text class="node-sub" x="52" y="42">otel · grafana</text>
+  </g></g>
+  <g class="node cat-security" transform="translate(540 120)" style="--d:0.3s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-security" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Auth Service</text>
+    <text class="node-sub" x="52" y="42">jwt · oauth2</text>
+  </g></g>
+  <g class="node cat-compute" transform="translate(540 220)" style="--d:0.3s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-compute" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">App Service</text>
+    <text class="node-sub" x="52" y="42">node.js · k8s</text>
+  </g></g>
+  <g class="node cat-queue" transform="translate(540 320)" style="--d:0.4s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-queue" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Event Bus</text>
+    <text class="node-sub" x="52" y="42">kafka</text>
+  </g></g>
+  <g class="node cat-compute" transform="translate(540 420)" style="--d:0.5s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-gpu" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Inference Worker</text>
+    <text class="node-sub" x="52" y="42">python · gpu pool</text>
+  </g></g>
+  <g class="node cat-storage" transform="translate(780 120)" style="--d:0.5s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-storage" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Postgres</text>
+    <text class="node-sub" x="52" y="42">rds · primary</text>
+  </g></g>
+  <g class="node cat-storage" transform="translate(780 220)" style="--d:0.6s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-cache" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Redis</text>
+    <text class="node-sub" x="52" y="42">cache · sessions</text>
+  </g></g>
+  <g class="node cat-storage" transform="translate(780 320)" style="--d:0.7s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-storage" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">Object Store</text>
+    <text class="node-sub" x="52" y="42">s3 · artifacts</text>
+  </g></g>
+  <g class="node cat-external" transform="translate(780 420)" style="--d:0.8s"><g class="node-in">
+    <rect class="node-box" width="168" height="56" rx="13"/>
+    <rect class="node-chip" x="10" y="12" width="32" height="32" rx="9"/>
+    <use class="node-icon" href="#i-llm" x="14" y="16" width="24" height="24"/>
+    <text class="node-title" x="52" y="26">LLM API</text>
+    <text class="node-sub" x="52" y="42">claude · streaming</text>
+  </g></g>
+</svg>
+<!-- ================== END DIAGRAM ================== -->
+
+</div></main>
+
+<footer><kbd>T</kbd> theme · <kbd>M</kbd> motion · <kbd>C</kbd> copy PNG · <kbd>E</kbd> export · <kbd>←</kbd><kbd>→</kbd><kbd>Space</kbd> steps · exports render at native resolution (no upscaling)</footer>
+<div id="toast" role="status"></div>
+
+<script>
+/* ============================================================
+   ai-archi runtime — theme, animation, step player, exporter.
+   This block is generic: it needs no edits when the SVG changes.
+   ============================================================ */
+(function(){
+"use strict";
+const root = document.documentElement;
+const svg  = document.getElementById('diagram');
+const $ = id => document.getElementById(id);
+const toastEl = $('toast');
+let toastT;
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>toastEl.classList.remove('show'), 2200); }
+
+/* ---------- theme ---------- */
+$('themeBtn').addEventListener('click', () => {
+  const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  try{ localStorage.setItem('ai-archi-theme', next); }catch(e){}
+});
+
+/* ---------- animation toggle ---------- */
+let animOn = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+function applyAnim(){
+  root.classList.toggle('anim-off', !animOn);
+  try{ animOn ? svg.unpauseAnimations() : svg.pauseAnimations(); }catch(e){}
+  $('animBtn').textContent = animOn ? '⏸ Motion' : '▶ Motion';
+}
+$('animBtn').addEventListener('click', () => { animOn = !animOn; applyAnim(); });
+applyAnim();
+
+/* ---------- step player ---------- */
+const stepEls = [...svg.querySelectorAll('[data-step]')];
+const maxStep = stepEls.reduce((m,el)=>Math.max(m, +el.dataset.step||0), 0);
+let cur = 0, playT = null;
+if (maxStep > 0) {
+  $('stepCtrl').hidden = false;
+  const render = () => {
+    svg.classList.toggle('stepping', cur > 0);
+    stepEls.forEach(el => {
+      const n = +el.dataset.step;
+      el.classList.toggle('step-now',  cur > 0 && n === cur);
+      el.classList.toggle('step-done', cur > 0 && n < cur);
+    });
+    $('stepInfo').textContent = cur > 0 ? cur + '/' + maxStep : 'all';
+  };
+  const stopPlay = () => { clearInterval(playT); playT = null; $('stepPlay').textContent = '▶'; };
+  const set = n => { cur = Math.max(0, Math.min(maxStep, n)); render(); };
+  $('stepCtrl')._reset = () => { stopPlay(); set(0); };
+  $('stepNext').addEventListener('click', () => { stopPlay(); set(cur + 1); });
+  $('stepPrev').addEventListener('click', () => { stopPlay(); set(cur - 1); });
+  $('stepPlay').addEventListener('click', () => {
+    if (playT) { stopPlay(); return; }
+    if (cur >= maxStep) cur = 0;
+    $('stepPlay').textContent = '⏸';
+    set(cur + 1);
+    playT = setInterval(() => { cur >= maxStep ? stopPlay() : set(cur + 1); }, 1500);
+  });
+}
+
+/* ---------- export ---------- */
+function themeVarBlocks(){
+  const out = { light:'', dark:'' };
+  for (const r of $('theme-vars').sheet.cssRules){
+    if (!r.selectorText) continue;
+    if (r.selectorText.includes('light')) out.light = r.style.cssText;
+    else if (r.selectorText.includes('dark')) out.dark = r.style.cssText;
+  }
+  return out;
+}
+const STATIC_OVERRIDES =
+  '*{animation:none !important}' +
+  '.packet{display:none}' +
+  '#diagram.stepping [data-step]{opacity:1}';
+
+/* mode: 'current' (raster export, active theme) | 'auto' (SVG export, follows viewer scheme) */
+function standaloneSVG(mode){
+  const vb = svg.viewBox.baseVal;
+  const clone = svg.cloneNode(true);
+  clone.classList.remove('stepping');
+  clone.querySelectorAll('animate,animateMotion,animateTransform').forEach(n => n.remove());
+  clone.setAttribute('width',  vb.width);
+  clone.setAttribute('height', vb.height);
+  const { light, dark } = themeVarBlocks();
+  const vars = mode === 'auto'
+    ? ':root{' + light + '}@media (prefers-color-scheme: dark){:root{' + dark + '}}'
+    : ':root{' + (root.getAttribute('data-theme') === 'dark' ? dark : light) + '}';
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg','style');
+  styleEl.textContent = vars + $('svg-style').textContent + STATIC_OVERRIDES;
+  clone.insertBefore(styleEl, clone.firstChild);
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function rasterBlob(scale, type){
+  return new Promise((resolve, reject) => {
+    const vb = svg.viewBox.baseVal;
+    const url = URL.createObjectURL(new Blob([standaloneSVG('current')], {type:'image/svg+xml'}));
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(vb.width * scale);
+      c.height = Math.round(vb.height * scale);
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('encode failed')),
+               'image/' + type, type === 'png' ? undefined : 0.95);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('svg render failed')); };
+    img.src = url;
+  });
+}
+
+function slug(){
+  return (document.title || 'diagram').toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'diagram';
+}
+function download(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+$('dlBtn').addEventListener('click', async () => {
+  const fmt = $('fmt').value, scale = +$('scale').value;
+  const theme = root.getAttribute('data-theme');
+  try{
+    if (fmt === 'svg') {
+      download(new Blob([standaloneSVG('auto')], {type:'image/svg+xml'}), slug() + '.svg');
+      toast('SVG exported — follows the viewer’s dark/light scheme');
+    } else {
+      const blob = await rasterBlob(scale, fmt);
+      download(blob, slug() + '-' + theme + '@' + scale + 'x.' + fmt);
+      toast(fmt.toUpperCase() + ' exported at ' + scale + '×');
+    }
+  }catch(err){ toast('Export failed: ' + err.message); }
+});
+
+$('copyBtn').addEventListener('click', () => {
+  if (!navigator.clipboard || !window.ClipboardItem) { toast('Clipboard API unavailable — use Export instead'); return; }
+  /* pass the promise directly: required for Safari's user-gesture rule */
+  navigator.clipboard.write([new ClipboardItem({ 'image/png': rasterBlob(2, 'png') })])
+    .then(() => toast('PNG copied — paste into Slack / Notion / GitHub'))
+    .catch(err => toast('Copy failed: ' + err.message));
+});
+
+/* ---------- keyboard shortcuts ---------- */
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = e.target && e.target.tagName;
+  if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const k = e.key.toLowerCase();
+  if (k === 't') $('themeBtn').click();
+  else if (k === 'm') $('animBtn').click();
+  else if (k === 'c') $('copyBtn').click();
+  else if (k === 'e') $('dlBtn').click();
+  else if (maxStep > 0 && e.key === 'ArrowRight') { e.preventDefault(); $('stepNext').click(); }
+  else if (maxStep > 0 && e.key === 'ArrowLeft')  { e.preventDefault(); $('stepPrev').click(); }
+  else if (maxStep > 0 && k === ' ')  { e.preventDefault(); $('stepPlay').click(); }
+  else if (maxStep > 0 && e.key === 'Escape') $('stepCtrl')._reset();
+});
+})();
+</script>
+</body>
+</html>

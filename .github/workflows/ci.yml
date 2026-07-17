@@ -1,0 +1,24 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: doctor (files + render + artifact checks)
+        run: node bin/ai-archi.mjs doctor
+      - name: validate canonical template
+        run: node bin/ai-archi.mjs check templates/diagram.html
+      - name: render example matches committed artifact
+        run: |
+          node bin/ai-archi.mjs render examples/ai-platform.architecture.json /tmp/ai-platform.html
+          diff /tmp/ai-platform.html examples/ai-platform.html
+      - name: icon libraries parse
+        run: node scripts/icons.mjs list

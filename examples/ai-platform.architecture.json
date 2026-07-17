@@ -1,0 +1,35 @@
+{
+  "diagram": "architecture",
+  "title": "AI Platform — Request & Inference Flow",
+  "subtitle": "Client traffic is authenticated at the edge, served by the app tier, and fanned out to async GPU inference.",
+  "zones": [
+    { "id": "vpc", "label": "Application VPC", "nodes": ["auth", "app", "bus", "worker"] },
+    { "id": "data", "label": "Data Layer", "nodes": ["postgres", "redis", "s3"] }
+  ],
+  "nodes": [
+    { "id": "client",   "label": "Web Client",       "sublabel": "react · browser",   "type": "client",   "col": 0, "row": 1 },
+    { "id": "gateway",  "label": "API Gateway",      "sublabel": "kong · rate-limit", "type": "gateway",  "col": 1, "row": 1 },
+    { "id": "auth",     "label": "Auth Service",     "sublabel": "jwt · oauth2",      "type": "security", "col": 2, "row": 0 },
+    { "id": "app",      "label": "App Service",      "sublabel": "node.js · k8s",     "type": "compute",  "col": 2, "row": 1 },
+    { "id": "bus",      "label": "Event Bus",        "sublabel": "kafka",             "type": "queue",    "col": 2, "row": 2 },
+    { "id": "worker",   "label": "Inference Worker", "sublabel": "python · gpu pool", "type": "compute",  "col": 2, "row": 3, "icon": "i-gpu" },
+    { "id": "postgres", "label": "Postgres",         "sublabel": "rds · primary",     "type": "storage",  "col": 3, "row": 0 },
+    { "id": "redis",    "label": "Redis",            "sublabel": "cache · sessions",  "type": "storage",  "col": 3, "row": 1, "icon": "i-cache" },
+    { "id": "s3",       "label": "Object Store",     "sublabel": "s3 · artifacts",    "type": "storage",  "col": 3, "row": 2 },
+    { "id": "llm",      "label": "LLM API",          "sublabel": "claude · streaming","type": "external", "col": 3, "row": 3, "icon": "i-llm" },
+    { "id": "obs",      "label": "Observability",    "sublabel": "otel · grafana",    "type": "observe",  "col": 1, "row": 3 }
+  ],
+  "edges": [
+    { "from": "client",  "to": "gateway",  "label": "https",      "step": 1, "packet": true },
+    { "from": "gateway", "to": "auth",     "label": "verify jwt", "step": 2 },
+    { "from": "gateway", "to": "app",      "label": "rest",       "step": 3, "packet": true },
+    { "from": "app",     "to": "postgres", "label": "sql",        "step": 4 },
+    { "from": "app",     "to": "redis",    "label": "cache" },
+    { "from": "app",     "to": "s3",       "label": "assets" },
+    { "from": "app",     "to": "bus",      "label": "publish",    "step": 5 },
+    { "from": "bus",     "to": "worker",   "label": "consume",    "step": 6 },
+    { "from": "worker",  "to": "llm",      "label": "inference",  "step": 7, "packet": true },
+    { "from": "gateway", "to": "obs",      "label": "metrics",    "dotted": true, "accent": "observe" },
+    { "from": "worker",  "to": "obs",      "label": "traces",     "dotted": true, "accent": "observe" }
+  ]
+}

@@ -15,11 +15,26 @@ sending it.
    `architecture` · `lld` (class/module internals) · `sequence` · `workflow`
    (approvals, CI/CD, runbooks) · `data-flow` (pipelines, PII boundaries) ·
    `lifecycle` (state machines).
-2. **Plan the layout on paper first** (in your head / a scratch note): columns =
+2. **Architecture requests: use the renderer, not hand-placed SVG.** Write a
+   small JSON IR (grid cells, not pixels — see
+   `schemas/architecture.schema.json` and the worked example
+   `examples/ai-platform.architecture.json`, copy its patterns), then:
+   ```bash
+   node bin/ai-archi.mjs render <name>.architecture.json [out.html]
+   ```
+   The renderer computes all geometry, routes and fans edges, inlines library
+   icons, wires up flow animation + the step player, and auto-validates the
+   artifact. On failure it prints path-level problems **with the fix in the
+   message** (e.g. `set "width": 196`) — apply them to the JSON and re-render;
+   never edit the renderer. Data-flow diagrams also fit this renderer well
+   (zones with `"accent": "security"` make PII boundaries).
+   For the remaining types (lld, sequence, workflow, lifecycle) hand-author
+   the SVG per the steps below and `references/diagram-types.md`.
+3. **Plan the layout on paper first** (in your head / a scratch note): columns =
    tiers, rows = peers. Assign every node an `(x, y)` on the grid **before**
    writing SVG. Default node is 168×56 with ≥ 70 px horizontal and ≥ 24 px
    vertical gaps between boxes.
-3. **Copy `templates/diagram.html`** to the output location (name it after the
+4. **Copy `templates/diagram.html`** to the output location (name it after the
    system, e.g. `checkout-architecture.html`). Then edit ONLY these regions:
    - `<title>` and the `.brand` h1/p in the toolbar
    - everything between `<!-- ==== DIAGRAM ==== -->` and `<!-- ==== END DIAGRAM ==== -->`
@@ -29,10 +44,39 @@ sending it.
      light/dark structure — the exporter parses it)
 
    **Never edit the `<script>` runtime or `#ui-style`** — they are generic.
-4. **Validate**: `node scripts/validate.mjs <output.html>` — fixes anything it
-   flags, re-run until PASS.
-5. **Report**: tell the user the file path, suggest `open <file>`, and mention
-   the toolbar (theme toggle, motion pause, step player, Copy PNG, export).
+5. **Validate**: `node bin/ai-archi.mjs check <output.html>` — fix anything it
+   flags, re-run until PASS. (Renderer output is already checked.)
+6. **Report**: tell the user the file path, suggest `open <file>`, and mention
+   the toolbar (theme toggle, motion pause, step player, Copy PNG, export)
+   plus keyboard shortcuts (T / M / C / E / arrows / Space).
+
+## Layout principles (read before placing anything)
+
+Readability comes from **spatial narrative**, not from drawing every
+dependency as an arrow:
+1. **One main path** — left → right; the reader should trace the happy path
+   without crossing lines. Give it the `step` numbers.
+2. **Few labeled edges** — label only cross-boundary or non-obvious hops;
+   adjacent steps stay unlabeled.
+3. **Short side branches** — auth, storage, observability connect up/down from
+   the nearest main-path node, never diagonally across the diagram.
+4. **Prune** — if a diagram wants 20+ edges, remove edges until the main path
+   is obvious; details belong in sublabels, not extra arrows.
+
+## Mermaid as an input dialect
+
+When the user pastes Mermaid, don't transliterate it — read it for topology
+and **lay out from scratch** in the matching mode:
+
+| Mermaid | ai-archi mode | Mapping |
+|---|---|---|
+| `flowchart` / `graph` | `workflow` (or renderer `architecture` if it's a component map) | `subgraph` → zone/lane; `{diamond}` → `s-decision` node; edge labels → `edge-label` (sparingly) |
+| `sequenceDiagram` | `sequence` | `participant` → participant (infer `cat-*` from the name); `->>` → message, `-->>` → dotted return; every message gets `data-step` |
+| `stateDiagram` | `lifecycle` | `[*]` → `s-start`/`s-end`; states → pills (success → `cat-observe`, failure → `cat-security`); transition labels → edge labels |
+| `classDiagram` | `lld` | classes → detail cards with member rows; `<\|--` → dotted `implements` edge |
+
+Drop Mermaid styling entirely; keep only topology and meaning. Choosing the
+grouping, lane order, and emphasis is the value you add.
 
 ## Building the SVG
 

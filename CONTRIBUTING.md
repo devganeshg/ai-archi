@@ -12,6 +12,7 @@ shape — most contributions land in one of four places.
 | New diagram-type recipes or layout patterns | `references/diagram-types.md` |
 | New semantic tech labels | `references/tech-labels.md` |
 | New icons / icon libraries | `assets/*.svg` + catalog in `assets/INDEX.md` (brand-neutral only — no real logomarks) |
+| Renderer geometry, routing, IR checks | `renderers/*.mjs` + `schemas/*.schema.json` (keep them in sync) |
 | Validation checks | `scripts/validate.mjs` |
 
 ## Ground rules

@@ -12,6 +12,12 @@ at maximum resolution.
 ## Features
 
 - **No design skills needed** — describe your architecture in English, get a diagram
+- **Renderer-backed architecture diagrams** — the agent writes a small JSON IR
+  (grid cells, not pixels); a deterministic zero-dependency renderer computes
+  the geometry, routes and fans edges, inlines icons, wires up the animation,
+  and refuses bad layouts with the fix spelled out in the error message
+- **Mermaid as an input dialect** — paste `flowchart` / `sequenceDiagram` /
+  `stateDiagram` / `classDiagram` code and it's re-laid-out in ai-archi style
 - **Six diagram types** — architecture, LLD (class/module internals), sequence,
   workflow (approvals, CI/CD, runbooks), data-flow (pipelines, PII boundaries),
   lifecycle (state machines)
@@ -69,7 +75,11 @@ the login flow"*, *"animate the CI/CD pipeline"*.
 
 ```
 SKILL.md                    the agent skill (workflow + SVG building rules)
+bin/ai-archi.mjs            CLI: render / check / icons / new / demo / doctor
 templates/diagram.html      canonical template: full runtime + demo diagram
+renderers/                  render-architecture.mjs (JSON IR → animated HTML)
+schemas/                    architecture IR schema
+examples/                   worked IR + rendered artifact
 assets/                     icon libraries: core.svg, tech.svg, shapes.svg
 assets/INDEX.md             icon catalog + label → icon mapping
 references/diagram-types.md per-type layout recipes (sequence, LLD, …)
@@ -78,7 +88,13 @@ scripts/icons.mjs           icon CLI: list / grep / pick (defs-ready markup)
 scripts/validate.mjs        structural + layout validator
 ```
 
-`templates/diagram.html` is itself a working demo — open it in a browser.
+`templates/diagram.html` is itself a working demo — open it in a browser. Or
+render the example from its JSON IR:
+
+```bash
+node bin/ai-archi.mjs demo        # → ./ai-platform.html, validated, ready to open
+node bin/ai-archi.mjs doctor      # verify an installation end to end
+```
 
 ## How generated files work
 
