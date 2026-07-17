@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+*.log
+# generated diagrams users create locally while testing
+/out/
